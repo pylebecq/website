@@ -1,0 +1,282 @@
+---
+draft: true
+publishDate: 2023-09-28T00:00:00Z
+title: "Facteur: A browser extension to manage Cloudflare Email Routing rules"
+excerpt: I wanted a convenient way to manage my Cloudflare Email Routing rules without going to the Cloudflare dashboard, but I did not find any, so I built it myself.
+category: Building a browser extension with Svelte
+tags:
+  - svelte
+  - cloudflare
+metadata:
+  canonical: https://www.pierre-yv.es/building-browser-extension-part-1-basics-of-svelte
+---
+
+import DListItem from '~/components/ui/DListItem.astro';
+import ToggleTheme from '~/components/common/ToggleTheme.astro';
+
+## Introduction
+
+It seems like it is impossible to use the internet today without having an email address. Every website you visit will ask to subscribe to their newsletter, every service you want to try will ask you to create an account.
+Even for gaming, which I do quite often, a lot of games nowadays also require you to create an account, instead of using your steam account or something like that.
+
+I am working as a backend software engineer at [Riot](https://tryriot.com), a cybersecurity platform which aims to grow cybersecurity awareness in companies. One of the feature we offer is to list all data breaches in which employees appear. With all the new data breaches discovered every week, I am more and more reluctant to give my email address because of the risks associated in case of a data breach like spam, and phishing.
+
+Sometimes, even without a data breach, your email address could end up in the hands of a company which will send unsolicited emails. Email addresses are sometimes sold to other companies without consent. I cannot count how many times I unsubscribed to a newsletter with the reason "I never signed up for this newsletter". And that is when the unsubscribe link actually works, which is often not the case.
+
+## The project
+
+I like the concept of disposable email addresses to protect your real email address. However, it means I won't receive my emails anymore. They will be received by a third party which will allow me to read them from their servers. Most of the time, these services don't even need any authentication, you can access any disposable email inbox publicly. And while I think it can be useful, sometimes I want to protect my real email address, but at the same time, I want to receive the email in my mailbox, and I don't want others to be able to read them.
+
+[Cloudflare Email Routing](https://developers.cloudflare.com/email-routing/) proposes just that. Basically, you will use a domain you own and will be able to create a ton of different email addresses, and Cloudflare will forward the emails received on those addresses to your real inbox. I think it's great. The only thing I don't like is going to the Cloudflare dashboard to create a new address. I found [x2.email](https://x2.email/), an open source project providing a small user interface on top of Cloudflare's API. But I did not want to host anything (even if you can host it completely free on _Vercel_ or _Netlify_ for example). I decided to build a small browser extension instead, and to built it using **Svelte**.
+
+Why Svelte? No specific reason. I am a backend developer so I don't have any preferred frontend stack. I already worked with [VueJS](https://vuejs.org/) in the past. I worked with [React](https://react.dev/) recently while building a [Raycast](https://www.raycast.com/) extension. I wanted to learn something new along the way, that's why I chose Svelte.
+
+In this series of articles, I will write what I learned along the way, in case it can be useful to anyone.
+
+## Basics of Svelte
+
+Before jumping in directly, I decided to learn Svelte directly from the official [tutorial](https://learn.svelte.dev/tutorial/welcome-to-svelte).
+
+### Creating components
+
+Like other frontend UI frameworks or libraries, Svelte allows you to write components, which are reusable self-contained blocks of code that encapsulate HTML, CSS, and Javascript that belong together. You can them combine these components to write a fully fledge application.
+
+To create a component, you create a file with the `.svelte` extension. For example:
+
+```svelte
+<script>
+  let name = 'Pierre-Yves';
+</script>
+
+<p>Hello {name}</p>
+```
+
+You write your javascript in the `<script>` tag. Outside of it, you can write your HTML. Opening curly braces allows you to write any Javascript code you want. You can reference variables defined in the `<script>` tag.
+
+You can also use curly braces to set element attributes, but also _inside_ attributes like this:
+
+```svelte
+<script>
+  let name = 'Pierre-Yves';
+  let image = '/image.png';
+</script>
+
+<img src={image} alt="{name}'s profile picture" />
+```
+
+You can add a `<style>` tag to add some CSS to your component. The resulting CSS will be scoped to the component, it will not affect other components.
+
+Of course, you can use a component inside another component, by importing it in the `<script>` tag, and using it in the markup, like this:
+
+<DListItem dt="App.svelte">
+```svelte
+<script>
+  import Nested from './Nested.svelte';
+</script>
+
+<p>This is the App component</p>
+<Nested />
+```
+</DListItem>
+
+<DListItem dt="Nested.svelte">
+```svelte
+<p>This is the Nested component</p>
+```
+</DListItem>
+
+This will render the following:
+
+```html
+<p>This is the App component</p>
+<p>This is the Nested component</p>
+```
+
+### Reactivity
+
+Of course, Svelte provides _reactivity_. If you are using a variable in your markup, and the value of this variable changes, Svelte will re-render what needs to be re-rendered.
+
+In the following example, the label of the button will be updated every time we click the button:
+
+```svelte
+<script>
+  let count = 0;
+
+  function increment() {
+    ++count;
+  }
+</script>
+
+<button on:click={increment}>
+  Clicked {count}
+  {count === 1 ? 'time' : 'times'}
+</button>
+```
+
+You can make reactive declarations and reactive statements using `$:`. Let's consider the following example:
+
+```svelte
+<script>
+  let count = 0;
+  let doubled = count * 2;
+
+  function increment() {
+    count += 1;
+  }
+</script>
+
+<button on:click={increment}>
+  {count} * 2 = {doubled}
+</button>
+```
+
+This example does not work. If I click the button 5 times, it will display `5 * 2 = 0`.
+Using `$:` we can make the `doubled` value reactive. This means the statement will be re-run when any of the referenced value changes.
+
+```diff
+-  let doubled = count * 2;
++  $: doubled = count * 2;
+```
+
+With this change, if I click the button 5 times, it will correctly display `5 * 2 = 10`. You can also use `$:` in front of a statement to have it re-run every time a referenced value changes (e.g. `$: console.log(doubled);`).
+
+Keep in mind that reactivity can be tricky when updating arrays and objects. When adding an element in an array using the `.push()` method for example, Svelte will not be able to see that the array changed. And the same goes for properties inside objects.
+
+### Properties
+
+Properties (generally shortened to "props") allow your component to receive values from other components using it. To declare a prop on a Svelte component, we have to use the `export` keyword:
+
+
+<DListItem dt="Nested.svelte">
+```svelte
+<script>
+  export let name;
+</script>
+
+<p>Hello {name}</p>
+```
+</DListItem>
+
+<DListItem dt="App.svelte">
+```svelte
+<script>
+  import Hello from './Hello.svelte';
+</script>
+
+<p>This is the App component</p>
+<Hello name={'Pierre-Yves'} />
+```
+</DListItem>
+
+This will render:
+
+```html
+<p>This is the App component</p>
+<p>Hello Pierre-Yves</p>
+```
+
+### Logic
+
+You can add some logic to your HTML markup using Svelte. Let's consider the following example:
+
+```svelte
+<script>
+  let count = 0;
+
+  function increment() {
+    count += 1;
+  }
+</script>
+
+<button on:click={increment}>
+  Clicked {count}
+  {count === 1 ? 'time' : 'times'}
+</button>
+
+{#if count > 10}
+  <p>{count} is greater than 10</p>
+{/if}
+```
+
+When the component is rendered the first time, the `<p>` element does not exist in the DOM. After clicking on the button 11 times, Svelte will create the `<p>` element.
+
+When working with lists, you can use the `{#each}` and `{/each}` statements to loop on all elements of your list.
+
+Finally, when working with promises, you can use the `{#await}`, `{then:}`, `{:catch}` and `{/await}` statements to conditionally display a loading state.
+
+### Events
+
+Another important to manage UI is the usage of events to react to user actions.
+As we have already seen in the button examples above, Svelte use the `on:` directive to attach event handlers.
+
+This works fine for all DOM related events. However, sometimes you want some custom events being emitted from your components. In that case, we can use an event dispatcher provided by Svelte, like this:
+
+<DListItem dt="Inner.svelte">
+```svelte
+<script>
+  import { createEventDispatcher } from 'svelte';
+
+  const dispatch = createEventDispatcher();
+
+  function sayHello() {
+    dispatch('message', {
+      text: 'Hello!'
+    });
+  }
+</script>
+
+<button on:click={sayHello}>
+  Click to say hello
+</button>
+```
+</DListItem>
+
+<DListItem dt="App.svelte">
+```svelte
+<script>
+  import Inner from './Inner.svelte';
+
+  function handleMessage(event) {
+    alert(event.detail.text);
+  }
+</script>
+
+<Inner on:message={handleMessage} />
+```
+</DListItem>
+
+When clicking the button, a custom `message` event will be dispatched, and the `App` component will react to it by displaying an alert message.
+
+### Bindings
+
+When dealing with form related elements, such as `<input>` for example, we saw earlier that we can set the value of the input using the following:
+
+```svelte
+<script>
+  let name = 'Pierre-Yves';
+
+  $: console.log(name)
+</script>
+
+<input value={name} />
+```
+
+I also added a reactive `console.log()` statement to see anytime the value of the name variable changes.
+
+By typing in my input field, I can see the `console.log()` is not re-executed again. In these cases, it can be useful to make sure the element can also set the `name` variable when the user types something in. Svelte uses the `bind:` directive for that.
+
+```svelte
+<script>
+  let name = 'Pierre-Yves';
+
+  $: console.log(name)
+</script>
+
+<input bind:value={name} />
+```
+
+This way, changes to the input value will update the `name` variable, and changes to the `name` variable will also update the input value.
+
+<hr/>
+
+I think that's it for Svelte basics. With all this, we should be able to start building our extension. In the next post, we will create the project, and explore some specificities of browser extensions.
