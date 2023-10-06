@@ -76,8 +76,9 @@ export const footerData = {
     { ariaLabel: 'LinkedIn', icon: 'tabler:brand-linkedin', href: 'https://www.linkedin.com/in/pierreyveslebecq/' },
   ],
   footNote: `
-    Built with <a class="underline dark:text-gray-200" href="https://astro.build/" alt="Astro website">Astro</a>, and is using the theme <a class="underline dark:text-gray-200" href="https://astro.build/themes/details/astrowind/" alt="Astrowind website">Astrowind</a>
-    made by <a class="underline dark:text-gray-200" href="https://onwidget.com/"> onWidget</a> · This website and all its content is licensed under a
-    <a class="underline dark:text-gray-200" href="https://creativecommons.org/licenses/by-sa/4.0/" alt="Creative Commons Attribution-ShareAlike 4.0 International License">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
+    This website and all its content is licensed under a
+    <a class="underline dark:text-gray-200" href="https://creativecommons.org/licenses/by-sa/4.0/" alt="Creative Commons Attribution-ShareAlike 4.0 International License">Creative Commons Attribution-ShareAlike 4.0 International License</a>. <br/>
+    Built with <a class="underline dark:text-gray-200" href="https://astro.build/" alt="Astro website">Astro</a> and the theme <a class="underline dark:text-gray-200" href="https://astro.build/themes/details/astrowind/" alt="Astrowind website">Astrowind</a>
+    made by <a class="underline dark:text-gray-200" href="https://onwidget.com/"> onWidget</a>.
   `,
 };
